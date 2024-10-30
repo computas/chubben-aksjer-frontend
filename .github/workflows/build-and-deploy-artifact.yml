@@ -1,0 +1,64 @@
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy to"
+        required: true
+        default: "main"
+        type: choice
+        options:
+          - test
+          - main
+jobs:
+  Build-And-Deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      LOCATION: europe-west1
+      PROJECT_ID: chubben
+      CLUSTER_NAME: chubben
+
+    permissions:
+      contents: read
+      id-token: write
+      actions: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: "chubben"
+          workload_identity_provider: "projects/714619712093/locations/global/workloadIdentityPools/github/providers/chubben-provider"
+
+      - name: Configure Docker to use Google Cloud credentials
+        run: |
+          gcloud auth configure-docker ${{ env.LOCATION }}-docker.pkg.dev
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: |
+            "${{ env.LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/aksjer/chubben-aksjer-frontend:${{ github.sha }}"
+            "${{ env.LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/aksjer/chubben-aksjer-frontend:latest"
+          provenance: false
+
+      - name: Connect To Cluster
+        uses: google-github-actions/get-gke-credentials@v1
+        with:
+          cluster_name: ${{ env.CLUSTER_NAME }}
+          location: ${{ env.LOCATION }}
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Update Kubernetes Deployment and Apply Resources
+        run: |
+          kubectl config set-context --current --namespace=aksjer 
+          sed -i "s,FULL_IMAGE_NAME,${{ env.LOCATION }}-docker.pkg.dev/chubben/aksjer/chubben-aksjer-frontend:${{ github.sha }},g" k8s/deployment.yaml
+          kubectl apply -f k8s/ --namespace=aksjer

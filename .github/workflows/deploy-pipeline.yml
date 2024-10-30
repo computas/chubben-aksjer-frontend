@@ -1,0 +1,24 @@
+name: Deploy Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy to"
+        required: true
+        default: "main"
+        type: choice
+        options:
+          - test
+          - main
+jobs:
+  Build-And-Deploy-Artifact:
+    uses: ./.github/workflows/build-and-deploy-artifact.yml
+    secrets: inherit
+    permissions:
+      contents: "read"
+      id-token: "write"
+      actions: "read"
