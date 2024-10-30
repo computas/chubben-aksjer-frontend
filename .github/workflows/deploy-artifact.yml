@@ -1,0 +1,54 @@
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy to"
+        required: true
+        default: "main"
+        type: choice
+        options:
+          - test
+          - main
+
+permissions:
+  contents: read
+  id-token: write
+  actions: read
+
+env:
+  LOCATION: europe-west1
+  PROJECT_ID: chubben
+  CLUSTER_NAME: chubben
+
+jobs:
+  Deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Echo Variables for Deploy
+        run: |
+          echo "CLUSTER_NAME: ${{ env.CLUSTER_NAME }}"
+          echo "LOCATION: ${{ env.LOCATION }}"
+          echo "PROJECT_ID: ${{ env.PROJECT_ID }}"
+
+      - name: Authenticate to Google Cloud
+        uses: "google-github-actions/auth@v1"
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Connect To Cluster
+        uses: google-github-actions/get-gke-credentials@v1
+        with:
+          cluster_name: ${{ env.CLUSTER_NAME }}
+          location: ${{ env.LOCATION }}
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Update Kubernetes Deployment and Apply Resources
+        run: |
+          kubectl config set-context --current --namespace=aksjer 
+          sed -i "s,FULL_IMAGE_NAME,${{ env.LOCATION }}-docker.pkg.dev/chubben/aksjer/chubben-aksjer-frontend:${{ github.sha }},g" k8s/deployment.yaml
+          kubectl apply -f k8s/ --namespace=aksjer

@@ -1,0 +1,33 @@
+name: Deploy Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy to"
+        required: true
+        default: "main"
+        type: choice
+        options:
+          - test
+          - main
+jobs:
+  Build-And-Publish-Artifact:
+    uses: ./.github/workflows/build-artifact.yml
+    secrets: inherit
+    permissions:
+      contents: "read"
+      id-token: "write"
+      actions: "read"
+
+  Deploy-To-GCP:
+    needs: Build-And-Publish-Artifact
+    uses: ./.github/workflows/deploy-artifact.yml
+    secrets: inherit
+    permissions:
+      contents: "read"
+      id-token: "write"
+      actions: "read"
