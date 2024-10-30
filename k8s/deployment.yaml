@@ -32,7 +32,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: chubben-aksjer-frontend-service
-  namespace: web
+  namespace: aksjer
 spec:
   selector:
     app: chubben-aksjer-frontend
