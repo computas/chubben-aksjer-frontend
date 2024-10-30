@@ -15,17 +15,8 @@ on:
           - test
           - main
 jobs:
-  Build-And-Publish-Artifact:
-    uses: ./.github/workflows/build-artifact.yml
-    secrets: inherit
-    permissions:
-      contents: "read"
-      id-token: "write"
-      actions: "read"
-
-  Deploy-To-GCP:
-    needs: Build-And-Publish-Artifact
-    uses: ./.github/workflows/deploy-artifact.yml
+  Build-And-Deploy-Artifact:
+    uses: ./.github/workflows/build-and-deploy-artifact.yml
     secrets: inherit
     permissions:
       contents: "read"
